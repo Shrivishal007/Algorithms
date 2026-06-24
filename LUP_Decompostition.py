@@ -1,9 +1,26 @@
-def lup_decomposition(A):
+"""
+Problem: Solve systems of linear equations and compute matrix inverses efficiently.
+Approach: LUP Decomposition (LU Decomposition with Partial Pivoting).
+Assumptions: The input matrix A is a square n x n matrix.
+Input: A square matrix A of size n x n, and a constant vector B of size n.
+Output: L, U, and P matrices, the solution vector X for AX = B, and the inverse matrix A^-1.
+Time Complexity: O(n^3) for decomposition and inverse, O(n^2) for solving a single system.
+Space Complexity: O(n^2) to store the L, U, and Inverse matrices.
+Key Idea: 
+AX = B      where P*A = L*U
+LUX = PB    where LY = PB and UX = Y
+"""
+
+def lupDecomposition(A):
     n = len(A)
+    # Create a deep copy of A to work on in-place
     a = [row[:] for row in A]
+
+    # Initialize permutation vector P to track row swaps
     P = list(range(n))
 
     for k in range(n - 1):
+        # 1. Partial Pivoting: Find the row with the largest absolute value in current column
         pivot = abs(a[k][k])
         k_i = k
 
@@ -15,21 +32,25 @@ def lup_decomposition(A):
         if pivot == 0:
             raise ValueError('Singular matrix')
 
+        # Swap rows in the matrix 'a' and the permutation vector 'P'
         a[k], a[k_i] = a[k_i], a[k]
         P[k], P[k_i] = P[k_i], P[k]
 
+        # 2. Gaussian Elimination: Eliminate entries below the pivot
         for i in range(k + 1, n):
-            a[i][k] /= a[k][k]
+            a[i][k] /= a[k][k] # Multiplier
             for j in range(k + 1, n):
                 a[i][j] -= a[i][k] * a[k][j]
 
     if a[n - 1][n - 1] == 0:
         raise ValueError('Singular matrix')
 
+    # 3. Extract L and U matrices from the combined matrix 'a'
     L = [[0] * n for _ in range(n)]
     U = [[0] * n for _ in range(n)]
+
     for i in range(n):
-        L[i][i] = 1
+        L[i][i] = 1 # L has 1s on the diagonal
         for j in range(i):
             L[i][j] = a[i][j]
 
@@ -38,13 +59,15 @@ def lup_decomposition(A):
 
     return L, U, P
 
-def lup_solve(L, U, P, B):
+def lupSolve(L, U, P, B):
     n = len(L)
-    
+
+    # Apply permutation to B (PB)
     PB = [0] * n
     for i in range(n):
         PB[i] = B[P[i]]
 
+    # Forward Substitution: Solve Ly = PB
     Y = [0] * n
     for i in range(n):
         summation = 0
@@ -52,6 +75,7 @@ def lup_solve(L, U, P, B):
             summation += L[i][j] * Y[j]
         Y[i] = PB[i] - summation
 
+    # Backward Substitution: Solve Ux = Y
     X = [0] * n
     for i in range(n - 1, -1, -1):
         summation = 0
@@ -61,22 +85,22 @@ def lup_solve(L, U, P, B):
 
     return X
 
-def inverse(A):
-    n = len(A)
-    L, U, P = lup_decomposition(A)
+def inverse(L, U, P):
+    n = len(L)
     A_inv = [[0] * n for _ in range(n)]
 
+    # Solve the system against the identity matrix columns (basis vectors)
     for j in range(n):
         B_j = [0] * n
         B_j[j] = 1
-        X_j = lup_solve(L, U, P, B_j)
+        X_j = lupSolve(L, U, P, B_j)
 
         for i in range(n):
             A_inv[i][j] = X_j[i]
 
     return A_inv
 
-def print_matrix(m, name):
+def printMatrix(m, name):
     n = len(m)
     print(f"{name}:")
     for i in range(n):
@@ -101,15 +125,15 @@ if __name__ == "__main__":
     print()
 
     try:
-        L, U, P = lup_decomposition(A)
+        L, U, P = lupDecomposition(A)
 
     except ValueError as e:
         print("LUP decomposition failed:", e)
 
     else:
-        print_matrix(L, "L Matrix")
+        printMatrix(L, "L Matrix")
         print()
-        print_matrix(U, "U Matrix")
+        printMatrix(U, "U Matrix")
         print()
         print("P Matrix:")
         for i in range(n):
@@ -118,11 +142,11 @@ if __name__ == "__main__":
             print()
         print()
 
-        X = lup_solve(L, U, P, b)
+        X = lupSolve(L, U, P, b)
         print("Solution Vector X:")
         for i in range(n):
             print(f"x{i + 1} = {X[i]:.3f}")
         print()
 
-        A_inv = inverse(A)
-        print_matrix(A_inv, "Inverse Matrix")
+        A_inv = inverse(L, U, P)
+        printMatrix(A_inv, "Inverse Matrix")
